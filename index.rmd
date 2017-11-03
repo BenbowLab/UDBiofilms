@@ -1,14 +1,15 @@
 ---
 title: "UDBio16S"
 author: "JReceveur"
+date: "November 2, 2017"
 output: 
   html_document:
-  toc: true
-  toc_depth: 2
-  toc_float: true
+    toc: true
+    toc_depth: 2
+    toc_float: true
 ---
-
-```{r setup, include=FALSE}
+  
+  ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.width=14, fig.height=10)
 knitr::opts_chunk$set(echo = TRUE, fig.align="center")
@@ -67,7 +68,7 @@ plot_richness(physeq, x="Date",color="Date", measures=c("Simpson"),)+geom_boxplo
 Evenness=read.table("C:\\Users\\Joe Receveur\\Documents\\MSU data\\UDBiofilms\\UDBFevennessPielou.txt", header=TRUE)
 Evenness$Date = factor(Evenness$Date, levels = c("17-May-16","31-May-16","14-Jul-16","28-Jul-16","16-Sep-16","30-Sep-16","16-Nov-16","30-Nov-16")) #fixes x-axis labels
 ggplot(Evenness, aes(x=Date, y=Evenness,color=Date))+facet_wrap(~Treatment)+geom_point()+
-geom_boxplot(aes(x=Date, y=Evenness, color=Date))+ylab("Species Evenness")+
+  geom_boxplot(aes(x=Date, y=Evenness, color=Date))+ylab("Species Evenness")+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
@@ -103,16 +104,16 @@ TrtDatePhylumplot+ theme(axis.text.x = element_text(angle = 45, hjust = 1))#+ th
 df <- psmelt(FamilyLevel)
 df$Abundance=df$Abundance*100
 Trtdata <- ddply(df, c("Family", "Treatment"), summarise,
-               N    = length(Abundance),
-               mean = mean(Abundance),
-               sd   = sd(Abundance),
-               se   = sd / sqrt(N)
+                 N    = length(Abundance),
+                 mean = mean(Abundance),
+                 sd   = sd(Abundance),
+                 se   = sd / sqrt(N)
 )
 ```
 ```{r TreatmentPlot2, echo=FALSE}
 Plot=ggplot(Trtdata, aes(x=Treatment, y=mean,fill=Treatment))+facet_wrap(~Family)
 Plot+geom_bar(stat="identity")+ geom_errorbar(aes(ymin=mean-se, ymax=mean+se),col="black")+
- theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 1%)")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 1%)")
 ```
 
 ##Family level date by treatment 
@@ -168,16 +169,16 @@ FamilyLevel = filter_taxa(GPrFamily, function(x) mean(x) > 1e-2, TRUE) #filter o
 df <- psmelt(PhylumLevel)
 df$Abundance=df$Abundance*100
 Trtdata <- ddply(df, c("Phylum", "Treatment2"), summarise,
-               N    = length(Abundance),
-               mean = mean(Abundance),
-               sd   = sd(Abundance),
-               se   = sd / sqrt(N)
+                 N    = length(Abundance),
+                 mean = mean(Abundance),
+                 sd   = sd(Abundance),
+                 se   = sd / sqrt(N)
 )
 ```
 ```{r TreatmentPlot3, echo=FALSE}
 Plot=ggplot(Trtdata, aes(x=Treatment2, y=mean,fill=Treatment2))+facet_wrap(~Phylum)
 Plot+geom_bar(stat="identity")+ geom_errorbar(aes(ymin=mean-se, ymax=mean+se),col="black")+
- theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 0.1%)")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 0.1%)")
 ```
 
 ##Family Level Relative Abundance
@@ -185,16 +186,16 @@ Plot+geom_bar(stat="identity")+ geom_errorbar(aes(ymin=mean-se, ymax=mean+se),co
 df <- psmelt(FamilyLevel)
 df$Abundance=df$Abundance*100
 Trtdata <- ddply(df, c("Family", "Treatment2"), summarise,
-               N    = length(Abundance),
-               mean = mean(Abundance),
-               sd   = sd(Abundance),
-               se   = sd / sqrt(N)
+                 N    = length(Abundance),
+                 mean = mean(Abundance),
+                 sd   = sd(Abundance),
+                 se   = sd / sqrt(N)
 )
 ```
 ```{r TreatmentPlot, echo=FALSE}
 Plot=ggplot(Trtdata, aes(x=Treatment2, y=mean,fill=Treatment2))+facet_wrap(~Family)
 Plot+geom_bar(stat="identity")+ geom_errorbar(aes(ymin=mean-se, ymax=mean+se),col="black")+
- theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 1%)")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 1%)")
 ```
 
 #Betadisper
