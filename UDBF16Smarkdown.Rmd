@@ -1,0 +1,246 @@
+---
+title: "UDBio16S"
+author: "JReceveur"
+date: "November 2, 2017"
+output: 
+  html_document:
+  toc: true
+  toc_depth: 2
+  toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=14, fig.height=10)
+knitr::opts_chunk$set(echo = TRUE, fig.align="center")
+```
+
+#Import
+``` {r import, include=FALSE, messages=FALSE, warnings=FALSE,echo= FALSE}
+library(vegan)
+library(MASS)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(magrittr)
+#library(mctoolsr)
+library(scales)
+library(grid)
+library(reshape2)
+library(phyloseq)
+library(randomForest)
+library(knitr)
+library(ape)
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#000000","#CC79A7")
+theme_set(theme_bw(base_size = 15)+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()))
+biom=import_biom("C:\\Users\\Joe Receveur\\Documents\\MSU data\\UDBiofilms\\UDBF_meta_ns_no_mito.biom",parseFunction= parse_taxonomy_greengenes)
+physeq=biom
+sample_data(physeq)$Date = factor(sample_data(physeq)$Date, levels = c("17-May-16","31-May-16","14-Jul-16","28-Jul-16","16-Sep-16","30-Sep-16","16-Nov-16","30-Nov-16")) 
+
+sample_data(physeq)$Treatment2=c("Modified","Reference","Modified","Modified","Modified","Reference","Modified","Modified","Reference","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Reference","Reference","Reference","Modified","Reference","Modified","Modified","Modified","Modified","Modified","Modified","Reference","Modified","Reference","Modified","Modified","Reference","Modified","Reference","Reference","Modified","Reference","Modified","Reference","Reference","Modified","Modified","Reference","Modified","Modified","Reference","Reference","Reference","Modified","Reference","Modified","Modified","Modified","Modified","Modified","Reference","Modified","Reference","Reference","Reference","Modified","Modified","Reference","Modified","Reference","Modified","Reference","Modified","Reference","Reference","Modified","Modified","Modified","Reference","Modified","Modified","Modified","Modified","Modified","Modified","Reference","Modified","Reference","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Modified","Reference","Reference","Modified","Modified","Reference","Modified","Modified","Modified","Modified","Modified","Reference","Modified","Reference","Reference","Reference","Reference","Modified","Modified","Modified","Modified","Reference","Reference")
+sample_data(physeq)$DateTreat= paste0(sample_data(physeq)$Treatment2," ",sample_data(physeq)$Date) #creates DateTreat variable
+
+#fixes x-axis labels
+
+```
+Data Location
+```{r Data Location, echo=FALSE}
+"C:\\Users\\Joe Receveur\\Documents\\MSU data\\UDBiofilms\\UDBF_meta_ns_no_mito.biom"
+```
+#Alpha Diversity
+##Observed Species
+
+```{r,echo=FALSE}
+plot_richness(physeq, x="Date",color="Date", measures=c("Observed"),)+geom_boxplot(aes(x=Date, y=value, color=Date), alpha=0.05)+facet_wrap(~Treatment)+ylab("Observed Species")
+
+```
+
+##Simpson Diversity
+```{r,echo=FALSE}
+
+plot_richness(physeq, x="Date",color="Date", measures=c("Simpson"),)+geom_boxplot(aes(x=Date, y=value, color=Date), alpha=0.05)+facet_wrap(~Treatment2)+ylab("Simpson Diversity")
+
+```
+
+##Species Evenness
+```{r, echo=FALSE}
+Evenness=read.table("C:\\Users\\Joe Receveur\\Documents\\MSU data\\UDBiofilms\\UDBFevennessPielou.txt", header=TRUE)
+Evenness$Date = factor(Evenness$Date, levels = c("17-May-16","31-May-16","14-Jul-16","28-Jul-16","16-Sep-16","30-Sep-16","16-Nov-16","30-Nov-16")) #fixes x-axis labels
+ggplot(Evenness, aes(x=Date, y=Evenness,color=Date))+facet_wrap(~Treatment)+geom_point()+
+geom_boxplot(aes(x=Date, y=Evenness, color=Date))+ylab("Species Evenness")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+#Taxa Plots
+```{r filteringForFamily2 ,echo=FALSE}
+GPr  = transform_sample_counts(physeq, function(x) x / sum(x) ) #transform samples based on relative abundance
+GPrPhylum=tax_glom(GPr, "Phylum")
+PhylumLevel = filter_taxa(GPrPhylum, function(x) mean(x) > 1e-3, TRUE) #filter out any taxa lower tha 0.1%
+GPrFamily=tax_glom(GPr,"Family")
+FamilyLevel = filter_taxa(GPrFamily, function(x) mean(x) > 1e-2, TRUE) #filter out any taxa lower tha 1%
+
+```
+
+##Phylum Level
+```{r PhylumRA, echo=FALSE, warning=FALSE}
+TrtDate=merge_samples(PhylumLevel,"Trt_Date")
+#sample_data(TrtDate)
+sample_data(TrtDate)$Treatment=c("Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Moderate","Moderate","Moderate","Moderate","Moderate","Moderate","Moderate","Moderate","Reference","Reference","Reference","Reference","Reference","Reference","Reference","Reference")
+sample_data(TrtDate)$Date=c("11/16","11/30","5/17","5/31","7/14","7/28","9/16","9/30","11/16","11/30","5/17","5/31","7/14","7/28","9/16","9/30","11/16","11/30","5/17","5/31","7/14","7/28","9/16","9/30")
+sample_data(TrtDate)$Date = factor(sample_data(TrtDate)$Date, levels = c("5/17", "5/31","7/14","7/28","9/16","9/30","11/16","11/30")) #fixes x-axis labels
+
+sample_data(TrtDate)$Instar=sample_names(TrtDate)
+#sample_data(Instar)
+TrtDate=transform_sample_counts(TrtDate, function(x) 100*x/sum(x)) #merging samples #(averaging)
+TrtDatePhylumplot=plot_bar(TrtDate, "Date","Abundance", fill='Phylum')  +ylab("Relative Bacterial Abundance (> 0.1%)")+facet_grid(Treatment ~ .)#+scale_fill_manual(values=cbPalette)
+TrtDatePhylumplot+ theme(axis.text.x = element_text(angle = 45, hjust = 1))#+ theme(legend.justification=c(0.05,0.95), legend.position=c(0.05,0.95))
+
+```
+
+##Family Level Relative Abundance
+```{r Summarizing2, echo=FALSE,warning=FALSE}
+df <- psmelt(FamilyLevel)
+df$Abundance=df$Abundance*100
+Trtdata <- ddply(df, c("Family", "Treatment"), summarise,
+               N    = length(Abundance),
+               mean = mean(Abundance),
+               sd   = sd(Abundance),
+               se   = sd / sqrt(N)
+)
+```
+```{r TreatmentPlot2, echo=FALSE}
+Plot=ggplot(Trtdata, aes(x=Treatment, y=mean,fill=Treatment))+facet_wrap(~Family)
+Plot+geom_bar(stat="identity")+ geom_errorbar(aes(ymin=mean-se, ymax=mean+se),col="black")+
+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 1%)")
+```
+
+##Family level date by treatment 
+```{r RADatexTrtFamily2, echo=FALSE, warning=FALSE, error=FALSE}
+TrtDate=merge_samples(FamilyLevel,"Trt_Date")
+#sample_data(TrtDate)
+sample_data(TrtDate)$Treatment=c("Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Heavy","Moderate","Moderate","Moderate","Moderate","Moderate","Moderate","Moderate","Moderate","Reference","Reference","Reference","Reference","Reference","Reference","Reference","Reference")
+sample_data(TrtDate)$Date=c("11/16","11/30","5/17","5/31","7/14","7/28","9/16","9/30","11/16","11/30","5/17","5/31","7/14","7/28","9/16","9/30","11/16","11/30","5/17","5/31","7/14","7/28","9/16","9/30")
+sample_data(TrtDate)$Date = factor(sample_data(TrtDate)$Date, levels = c("5/17", "5/31","7/14","7/28","9/16","9/30","11/16","11/30")) #fixes x-axis labels
+
+sample_data(TrtDate)$Instar=sample_names(TrtDate)
+#sample_data(Instar)
+TrtDate=transform_sample_counts(TrtDate, function(x) 100*x/sum(x)) #merging samples #(averaging)
+TrtDateFamilyplot=plot_bar(TrtDate, "Date","Abundance", fill='Family')  +ylab("Relative Bacterial Abundance (> 1%)")+facet_grid(Treatment ~ .)#+scale_fill_manual(values=cbPalette)
+TrtDateFamilyplot+ theme(axis.text.x = element_text(angle = 45, hjust = 1))#+ theme(legend.justification=c(0.05,0.95), legend.position=c(0.05,0.95))
+
+```
+
+
+
+```{r}
+
+```
+#Reference vs Modified (Heavy and Moderate combined)
+##Observed Species
+
+```{r,echo=FALSE}
+plot_richness(physeq, x="Date",color="Date", measures=c("Observed"),)+geom_boxplot(aes(x=Date, y=value, color=Date), alpha=0.05)+facet_wrap(~Treatment2)+ylab("Observed Species")
+
+```
+
+##Simpson Diversity
+```{r,echo=FALSE}
+
+plot_richness(physeq, x="Date",color="Date", measures=c("Simpson"),)+geom_boxplot(aes(x=Date, y=value, color=Date), alpha=0.05)+facet_wrap(~Treatment2)+ylab("Simpson Diversity")
+
+```
+
+
+
+#Taxa Plots (Modified vs Reference)
+```{r filteringForFamily ,echo=FALSE}
+GPr  = transform_sample_counts(physeq, function(x) x / sum(x) ) #transform samples based on relative abundance
+GPrPhylum=tax_glom(GPr, "Phylum")
+PhylumLevel = filter_taxa(GPrPhylum, function(x) mean(x) > 1e-3, TRUE) #filter out any taxa lower tha 0.1%
+GPrFamily=tax_glom(GPr,"Family")
+FamilyLevel = filter_taxa(GPrFamily, function(x) mean(x) > 1e-2, TRUE) #filter out any taxa lower tha 1%
+
+```
+
+##Phylum Level Relative Abundance
+```{r Summarizing3, echo=FALSE}
+df <- psmelt(PhylumLevel)
+df$Abundance=df$Abundance*100
+Trtdata <- ddply(df, c("Phylum", "Treatment2"), summarise,
+               N    = length(Abundance),
+               mean = mean(Abundance),
+               sd   = sd(Abundance),
+               se   = sd / sqrt(N)
+)
+```
+```{r TreatmentPlot3, echo=FALSE}
+Plot=ggplot(Trtdata, aes(x=Treatment2, y=mean,fill=Treatment2))+facet_wrap(~Phylum)
+Plot+geom_bar(stat="identity")+ geom_errorbar(aes(ymin=mean-se, ymax=mean+se),col="black")+
+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 0.1%)")
+```
+
+##Family Level Relative Abundance
+```{r Summarizing, echo=FALSE}
+df <- psmelt(FamilyLevel)
+df$Abundance=df$Abundance*100
+Trtdata <- ddply(df, c("Family", "Treatment2"), summarise,
+               N    = length(Abundance),
+               mean = mean(Abundance),
+               sd   = sd(Abundance),
+               se   = sd / sqrt(N)
+)
+```
+```{r TreatmentPlot, echo=FALSE}
+Plot=ggplot(Trtdata, aes(x=Treatment2, y=mean,fill=Treatment2))+facet_wrap(~Family)
+Plot+geom_bar(stat="identity")+ geom_errorbar(aes(ymin=mean-se, ymax=mean+se),col="black")+
+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ylab("Relative Abundance (> 1%)")
+```
+
+#Betadisper
+##By Treatment Only
+### Permutest
+``` {r, echo=FALSE}
+GPdist=phyloseq::distance(physeq, "jaccard")
+beta <- betadisper(GPdist, sample_data(physeq)$Treatment)
+permutest(beta, pairwise= FALSE, permutations= 999)
+```
+
+###Tukey HS
+```{r, echo=FALSE}
+beta.HSD=TukeyHSD(beta)
+beta.HSD$group
+```
+
+###Betadisper plot
+I can make the plots in vegan look better later( Black=Heavy, Red= Moderate, Green= Reference ). Confidence intervals are 95% CI
+```{r, echo=FALSE}
+plot(beta, label=FALSE,ellipse=TRUE, hull=FALSE, conf=0.95, segments = FALSE)
+```
+
+### Boxplot of distance from centroid
+```{r, echo= FALSE}
+boxplot(beta)
+```
+
+##Betadisper by Treatment x Date
+### Permutest
+``` {r, echo=FALSE}
+GPdist=phyloseq::distance(physeq, "jaccard")
+beta <- betadisper(GPdist, sample_data(physeq)$DateTreat)
+permutest(beta, pairwise= FALSE, permutations= 999)
+```
+
+```
+
+###Betadisper plot
+I can make the plots in vegan look better later. Confidence intervals are 95% CI
+```{r, echo=FALSE}
+plot(beta, label=FALSE,ellipse=TRUE, hull=FALSE, conf=0.95, segments = FALSE)
+```
+
+### Boxplot of distance from centroid
+```{r, echo= FALSE}
+boxplot(beta)
+```
